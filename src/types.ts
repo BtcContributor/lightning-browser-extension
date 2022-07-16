@@ -1,14 +1,14 @@
 import { PaymentRequestObject } from "bolt11";
+import { CURRENCIES } from "~/common/constants";
+import connectors from "~/extension/background-script/connectors";
 import { SendPaymentResponse } from "~/extension/background-script/connectors/connector.interface";
-
-import connectors from "./extension/background-script/connectors";
 
 export type ConnectorType = keyof typeof connectors;
 
 export interface Account {
   id: string;
   connector: ConnectorType;
-  config: string | Record<string, unknown>;
+  config: string;
   name: string;
 }
 
@@ -19,8 +19,10 @@ export interface Accounts {
 export interface AccountInfo {
   alias: string;
   balance: number;
+  fiatBalance?: string;
   id: string;
   name: string;
+  satsBalance?: string;
 }
 
 export interface MetaData {
@@ -68,13 +70,15 @@ export interface Battery extends OriginData {
   icon: string;
 }
 
-// deprecated message type,please stop using this
+/**
+ * @deprecated Use MessageDefault instead
+ */
 export interface Message {
+  action?: string;
   application?: string;
   args: Record<string, unknown>;
   origin: OriginData | OriginDataInternal;
   prompt?: boolean;
-  action?: string;
 }
 
 // new message  type, please use this
@@ -84,10 +88,11 @@ export interface MessageDefault {
   prompt?: boolean;
 }
 
-export interface MessageAccountDelete extends MessageDefault {
-  args: { id: Account["id"] };
-  action: "deleteAccount";
+export interface MessageAccountRemove extends MessageDefault {
+  args?: { id: Account["id"] };
+  action: "removeAccount";
 }
+
 export interface MessageAccountAdd extends MessageDefault {
   args: Omit<Account, "id">;
   action: "addAccount";
@@ -99,9 +104,74 @@ export interface MessageAccountEdit extends MessageDefault {
   };
   action: "editAccount";
 }
+export interface MessageAccountDecryptedDetails extends MessageDefault {
+  args: {
+    id: Account["id"];
+    name: Account["name"];
+  };
+  action: "accountDecryptedDetails";
+}
 
-export interface MessageAccountInfo extends Omit<MessageDefault, "args"> {
+export interface MessageAccountInfo extends MessageDefault {
   action: "accountInfo";
+}
+
+export interface MessageAccountAll extends MessageDefault {
+  action: "getAccounts";
+}
+
+export interface MessageBlocklistAdd extends MessageDefault {
+  args: {
+    host: string;
+    name: string;
+    imageURL: string;
+  };
+  action: "addBlocklist";
+}
+
+export interface MessageBlocklistDelete extends MessageDefault {
+  args: {
+    host: string;
+  };
+  action: "deleteBlocklist";
+}
+
+export interface MessageBlocklistGet extends MessageDefault {
+  args: {
+    host: string;
+  };
+  action: "getBlocklist";
+}
+
+export interface MessageSetIcon extends MessageDefault {
+  action: "setIcon";
+  args: {
+    icon: string;
+  };
+}
+
+export interface MessageAccountLock extends MessageDefault {
+  action: "lock";
+}
+
+export interface MessageAccountUnlock extends MessageDefault {
+  args: { password: string | number };
+  action: "unlock";
+}
+
+export interface MessageAccountSelect extends MessageDefault {
+  args: { id: Account["id"] };
+  action: "selectAccount";
+}
+export interface MessageAllowanceList extends MessageDefault {
+  action: "listAllowances";
+}
+
+export interface MessageAllowanceDelete extends MessageDefault {
+  args: {
+    id: Allowance["id"];
+  };
+  action: "deleteAllowance";
 }
 
 interface LNURLChannelServiceResponse {
@@ -203,33 +273,71 @@ export type Transaction = {
   totalFees: string;
   description: string;
   location: string;
+  totalAmountFiat: string;
 };
 
-export type Payment = {
-  preimage: string;
+export interface Payment {
+  allowanceId: string;
+  createdAt: string;
+  description: string;
+  destination: string;
+  host: string;
+  id?: number;
+  location: string;
+  name: string;
   paymentHash: string;
+  paymentRequest: string;
+  preimage: string;
+  totalAmount: number | string;
+  totalFees: number | string;
+}
+
+export interface PaymentResponse
+  extends Pick<Payment, "destination" | "preimage" | "paymentHash"> {
   route: {
-    total_amt: number;
-    total_fees: number;
+    total_time_lock: number;
+    total_fees: string;
+    total_amt: string;
+    hops: {
+      chan_id: string;
+      chan_capacity: string;
+      amt_to_forward: string;
+      fee: string;
+      expiry: number;
+      amt_to_forward_msat: string;
+      fee_msat: string;
+      pub_key: string;
+      tlv_payload: true;
+      mpp_record: {
+        payment_addr: string;
+        total_amt_msat: string;
+      };
+      amp_record: null;
+      custom_records: unknown;
+    };
+    total_fees_msat: string;
+    total_amt_msat: string;
   };
-};
+}
 
 export interface Allowance {
+  createdAt: string;
   enabled: boolean;
   host: string;
-  id: string;
+  id: number;
   imageURL: string;
-  lastPaymendAt: number;
+  lastPaymentAt: string;
+  lnurlAuth: string;
   name: string;
   payments: Transaction[];
-  paymentsCount: number;
   paymentsAmount: number;
+  paymentsCount: number;
   percentage: string;
   remainingBudget: number;
+  tag: string;
   totalBudget: number;
   usedBudget: number;
 }
-
 export interface SettingsStorage {
   websiteEnhancements: boolean;
   legacyLnurlAuth: boolean;
@@ -238,4 +346,45 @@ export interface SettingsStorage {
   userEmail: string;
   locale: string;
   theme: string;
+  currency: CURRENCIES;
+  exchange: SupportedExchanges;
+  debug: boolean;
 }
+
+export interface Blocklist {
+  id?: number;
+  host: string;
+  name: string;
+  imageURL: string;
+  isBlocked: boolean;
+}
+
+export interface Badge {
+  label: string;
+  color: string;
+  textColor: string;
+}
+
+export interface Publisher
+  extends Pick<
+    Allowance,
+    | "host"
+    | "imageURL"
+    | "name"
+    | "payments"
+    | "paymentsAmount"
+    | "paymentsCount"
+    | "percentage"
+    | "totalBudget"
+    | "usedBudget"
+  > {
+  id: number;
+  title?: string;
+  badge?: {
+    label: string;
+    color: string;
+    textColor: string;
+  };
+}
+
+export type SupportedExchanges = "alby" | "coindesk" | "yadio";

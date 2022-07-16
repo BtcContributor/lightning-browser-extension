@@ -1,5 +1,6 @@
 import * as accounts from "./actions/accounts";
 import * as allowances from "./actions/allowances";
+import * as blocklist from "./actions/blocklist";
 import * as ln from "./actions/ln";
 import lnurl from "./actions/lnurl";
 import * as payments from "./actions/payments";
@@ -36,19 +37,23 @@ const routes = {
   getBalance: ln.getBalance,
   getPayments: payments.all,
   accountInfo: accounts.info,
+  accountDecryptedDetails: accounts.decryptedDetails,
   addAccount: accounts.add,
   editAccount: accounts.edit,
   getAccounts: accounts.all,
   removeAccount: accounts.remove,
-  deleteAccount: accounts.deleteAccount,
   selectAccount: accounts.select,
   setPassword: setup.setPassword,
   reset: setup.reset,
   status: setup.status,
   validateAccount: setup.validateAccount,
-  setIcon: setup.setIcon,
+  setIcon: setup.setIconMessageHandler,
   setSetting: settings.set,
   getSettings: settings.get,
+  addBlocklist: blocklist.add,
+  deleteBlocklist: blocklist.deleteBlocklist,
+  getBlocklist: blocklist.get,
+  listBlocklist: blocklist.list,
   lnurl: lnurl,
 };
 
@@ -62,7 +67,7 @@ const router = (path: FixMe) => {
   }, routes);
 
   if (!route) {
-    console.log(`Route not found: ${path}`);
+    console.warn(`Route not found: ${path}`);
     // return a function to keep the expected method signature
     return () => {
       return Promise.reject({ error: `${path} not found}` });

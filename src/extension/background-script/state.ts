@@ -2,6 +2,7 @@ import merge from "lodash/merge";
 import pick from "lodash/pick";
 import browser from "webextension-polyfill";
 import createState from "zustand";
+import { CURRENCIES } from "~/common/constants";
 import { decryptData } from "~/common/lib/crypto";
 import i18n from "~/i18n/i18nConfig";
 import type { Account, Accounts, SettingsStorage } from "~/types";
@@ -30,7 +31,7 @@ interface BrowserStorage {
   currentAccountId: string | null;
 }
 
-export const DEFAULT_SETTINGS = {
+export const DEFAULT_SETTINGS: SettingsStorage = {
   websiteEnhancements: true,
   legacyLnurlAuth: false,
   isUsingLegacyLnurlAuthKey: true,
@@ -38,6 +39,9 @@ export const DEFAULT_SETTINGS = {
   userEmail: "",
   locale: i18n.resolvedLanguage,
   theme: "system",
+  currency: CURRENCIES.USD,
+  exchange: "alby",
+  debug: false,
 };
 
 // these keys get synced from the state to the browser storage
@@ -112,7 +116,7 @@ const state = createState<State>((set, get) => ({
 }));
 
 browserStorageKeys.forEach((key) => {
-  console.log(`Adding state subscription for ${key}`);
+  console.info(`Adding state subscription for ${key}`);
   state.subscribe(
     (newValue, previousValue) => {
       //if (previous && Object.keys(previous) > 0) {

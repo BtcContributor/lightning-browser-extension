@@ -1,16 +1,17 @@
 import { test } from "@playwright/test";
 import { USER } from "complete-randomer";
 import { getDocument, queries, waitFor } from "pptr-testing-library";
-const { getByText, getByLabelText } = queries;
 
 import { loadExtension } from "./helpers/loadExtension";
 
+const { getByText, getByLabelText } = queries;
+
 const commonCreateWalletUserCreate = async () => {
   const user = USER.SINGLE();
-  const { page: welcomePage, browser } = await loadExtension();
+  const { page: page, browser } = await loadExtension();
 
-  // go through welcome page
-  const $document = await getDocument(welcomePage);
+  // get document from welcome page
+  const $document = await getDocument(page);
 
   // go through welcome page
   const startedButton = await getByText($document, "Get Started");
@@ -34,57 +35,73 @@ const commonCreateWalletUserCreate = async () => {
 
   await waitFor(() => getByText($document, "Do you have a lightning wallet?"));
 
-  return { user, browser, welcomePage, $document };
+  return { user, browser, page, $document };
 };
 
-const commonCreateWalletSuccessCheck = async ({
-  browser,
-  welcomePage,
-  $document,
-}) => {
+const commonCreateWalletSuccessCheck = async ({ page, $document }) => {
   // submit form
   const continueButton = await getByText($document, "Continue");
   continueButton.click();
 
-  await welcomePage.waitForResponse(() => true);
+  await page.waitForResponse(() => true);
   await waitFor(() => getByText($document, "Success!"));
+};
 
-  await browser.close();
+const createAlbyWallet = async ({ page, $document, user }) => {
+  // click at "Create Alby Wallet"
+  const createNewWalletButton = await getByText($document, "Alby Wallet");
+  createNewWalletButton.click();
+
+  await waitFor(() => getByText($document, "Your Alby Lightning Wallet"));
+
+  // type user email
+  const emailField = await getByLabelText($document, "Email Address");
+  await emailField.type(user.email);
+
+  // type user password and confirm password
+  const walletPasswordField = await getByLabelText($document, "Password");
+  await walletPasswordField.type(user.password);
+
+  // click create a wallet button
+  const createWalletButton = await getByText($document, "Continue");
+  createWalletButton.click();
+
+  await page.waitForResponse(() => true);
+
+  await waitFor(() => getByText($document, "Your Alby account is ready."));
 };
 
 test.describe("Create or connect wallets", () => {
   test("successfully creates an Alby wallet", async () => {
-    const { user, browser, welcomePage, $document } =
+    const { user, browser, page, $document } =
       await commonCreateWalletUserCreate();
+    await createAlbyWallet({ page, $document, user });
+    await commonCreateWalletSuccessCheck({ page, $document });
+    await browser.close();
+  });
 
-    // click at "Create Alby Wallet"
-    const createNewWalletButton = await getByText($document, "Alby Wallet");
-    createNewWalletButton.click();
+  test("successfully creates an Alby wallet and opens publishers screen", async () => {
+    const { user, browser, page, $document } =
+    await commonCreateWalletUserCreate();
+    await createAlbyWallet({ page, $document, user });
+    await commonCreateWalletSuccessCheck({ page, $document });
 
-    await waitFor(() => getByText($document, "Your Alby Lightning Wallet"));
+    // reload and expect to be on publishers screen
+    await Promise.all([
+      page.waitForNavigation(), // The promise resolves after navigation has finished
+      page.reload({ waitUntil: ["networkidle0", "domcontentloaded"] }),
+    ]);
 
-    // type user email
-    const emailField = await getByLabelText($document, "Email Address");
-    await emailField.type(user.email);
+    const $optionsdocument = await getDocument(page);
 
-    // type user password and confirm password
-    const walletPasswordField = await getByLabelText($document, "Password");
-    await walletPasswordField.type(user.password);
+    await waitFor(() => getByText($optionsdocument, "Your ⚡️ Websites"));
+    await waitFor(() => getByText($optionsdocument, "Other ⚡️ Websites"));
 
-    // click create a wallet button
-    const createWalletButton = await getByText($document, "Continue");
-    createWalletButton.click();
-
-    await welcomePage.waitForResponse(() => true);
-
-    await waitFor(() => getByText($document, "Your Alby account is ready."));
-
-    await commonCreateWalletSuccessCheck({ browser, welcomePage, $document });
+    await browser.close();
   });
 
   test("successfully connects to LNBits wallet", async () => {
-    const { browser, welcomePage, $document } =
-      await commonCreateWalletUserCreate();
+    const { browser, page, $document } = await commonCreateWalletUserCreate();
 
     // click at "Create LNbits Wallet"
     const createNewWalletButton = await getByText($document, "LNbits");
@@ -96,12 +113,12 @@ test.describe("Create or connect wallets", () => {
     const adminKeyField = await getByLabelText($document, "LNbits Admin Key");
     await adminKeyField.type(lnBitsAdminKey);
 
-    await commonCreateWalletSuccessCheck({ browser, welcomePage, $document });
+    await commonCreateWalletSuccessCheck({ page, $document });
+    await browser.close();
   });
 
   test("successfully connects to BlueWallet", async () => {
-    const { browser, welcomePage, $document } =
-      await commonCreateWalletUserCreate();
+    const { browser, page, $document } = await commonCreateWalletUserCreate();
 
     // click at "LNDHub (BlueWallet)"
     const createNewWalletButton = await getByText(
@@ -117,12 +134,12 @@ test.describe("Create or connect wallets", () => {
     const lndUrlField = await getByLabelText($document, "LNDHub Export URI");
     await lndUrlField.type(lndHubUrl);
 
-    await commonCreateWalletSuccessCheck({ browser, welcomePage, $document });
+    await commonCreateWalletSuccessCheck({ page, $document });
+    await browser.close();
   });
 
   test("successfully connects to LND", async () => {
-    const { browser, welcomePage, $document } =
-      await commonCreateWalletUserCreate();
+    const { browser, page, $document } = await commonCreateWalletUserCreate();
 
     const createNewWalletButton = await getByText($document, "LND");
     createNewWalletButton.click();
@@ -138,19 +155,85 @@ test.describe("Create or connect wallets", () => {
     await lndUrlField.type(restApiUrl);
 
     const macroon =
-      "0201036C6E6402F801030A10E2133A1CAC2C5B4D56E44E32DC64C8551201301A160A0761646472657373120472656164120577726974651A130A04696E666F120472656164120577726974651A170A08696E766F69636573120472656164120577726974651A210A086D616361726F6F6E120867656E6572617465120472656164120577726974651A160A076D657373616765120472656164120577726974651A170A086F6666636861696E120472656164120577726974651A160A076F6E636861696E120472656164120577726974651A140A057065657273120472656164120577726974651A180A067369676E6572120867656E657261746512047265616400000620C4F9783E0873FA50A2091806F5EBB919C5DC432E33800B401463ADA6485DF0ED";
+      "0201036c6e6402f801030a10ffa3346da5624e139ff472aacf8b045a1201301a160a0761646472657373120472656164120577726974651a130a04696e666f120472656164120577726974651a170a08696e766f69636573120472656164120577726974651a210a086d616361726f6f6e120867656e6572617465120472656164120577726974651a160a076d657373616765120472656164120577726974651a170a086f6666636861696e120472656164120577726974651a160a076f6e636861696e120472656164120577726974651a140a057065657273120472656164120577726974651a180a067369676e6572120867656e6572617465120472656164000006207fc7ef1e31ec5afc4982a62ff624ae5682212783fbaf50808b96cde96615760d";
     const macroonField = await getByLabelText(
       $document,
       "Macaroon (HEX format)"
     );
     await macroonField.type(macroon);
 
-    await commonCreateWalletSuccessCheck({ browser, welcomePage, $document });
+    await commonCreateWalletSuccessCheck({ page, $document });
+    await browser.close();
+  });
+
+  test("successfully connects to Umbrel", async () => {
+    const { browser, page, $document } = await commonCreateWalletUserCreate();
+
+    const connectButton = await getByText($document, "Umbrel");
+    connectButton.click();
+
+    // wait for the field label instead of headline (headline text already exists on the page before)
+    await waitFor(() => getByText($document, "lndconnect REST URL"));
+
+    const macaroon =
+      "AgEDbG5kAvgBAwoQ/6M0baViThOf9HKqz4sEWhIBMBoWCgdhZGRyZXNzEgRyZWFkEgV3cml0ZRoTCgRpbmZvEgRyZWFkEgV3cml0ZRoXCghpbnZvaWNlcxIEcmVhZBIFd3JpdGUaIQoIbWFjYXJvb24SCGdlbmVyYXRlEgRyZWFkEgV3cml0ZRoWCgdtZXNzYWdlEgRyZWFkEgV3cml0ZRoXCghvZmZjaGFpbhIEcmVhZBIFd3JpdGUaFgoHb25jaGFpbhIEcmVhZBIFd3JpdGUaFAoFcGVlcnMSBHJlYWQSBXdyaXRlGhgKBnNpZ25lchIIZ2VuZXJhdGUSBHJlYWQAAAYgf8fvHjHsWvxJgqYv9iSuVoIhJ4P7r1CAi5bN6WYVdg0=";
+    const restApiUrl = `lndconnect://lnd1.regtest.getalby.com?cert=&macaroon=${macaroon}`;
+    const lndConnectUrlField = await getByLabelText(
+      $document,
+      "lndconnect REST URL"
+    );
+    await lndConnectUrlField.type(restApiUrl);
+
+    await commonCreateWalletSuccessCheck({ page, $document });
+    await browser.close();
+  });
+
+  test("successfully connects to myNode", async () => {
+    const { browser, page, $document } = await commonCreateWalletUserCreate();
+
+    const connectButton = await getByText($document, "myNode");
+    connectButton.click();
+
+    // wait for the field label instead of headline (headline text already exists on the page before)
+    await waitFor(() => getByText($document, "lndconnect REST URL"));
+
+    const macaroon =
+      "AgEDbG5kAvgBAwoQ/6M0baViThOf9HKqz4sEWhIBMBoWCgdhZGRyZXNzEgRyZWFkEgV3cml0ZRoTCgRpbmZvEgRyZWFkEgV3cml0ZRoXCghpbnZvaWNlcxIEcmVhZBIFd3JpdGUaIQoIbWFjYXJvb24SCGdlbmVyYXRlEgRyZWFkEgV3cml0ZRoWCgdtZXNzYWdlEgRyZWFkEgV3cml0ZRoXCghvZmZjaGFpbhIEcmVhZBIFd3JpdGUaFgoHb25jaGFpbhIEcmVhZBIFd3JpdGUaFAoFcGVlcnMSBHJlYWQSBXdyaXRlGhgKBnNpZ25lchIIZ2VuZXJhdGUSBHJlYWQAAAYgf8fvHjHsWvxJgqYv9iSuVoIhJ4P7r1CAi5bN6WYVdg0=";
+    const restApiUrl = `lndconnect://lnd1.regtest.getalby.com?cert=&macaroon=${macaroon}`;
+    const lndConnectUrlField = await getByLabelText(
+      $document,
+      "lndconnect REST URL"
+    );
+    await lndConnectUrlField.type(restApiUrl);
+
+    await commonCreateWalletSuccessCheck({ page, $document });
+    await browser.close();
+  });
+
+  test("successfully connects to Start9", async () => {
+    const { browser, page, $document } = await commonCreateWalletUserCreate();
+
+    const connectButton = await getByText($document, "Start9");
+    connectButton.click();
+
+    // wait for the field label instead of headline (headline text already exists on the page before)
+    await waitFor(() => getByText($document, "lndconnect REST URL"));
+
+    const macaroon =
+      "AgEDbG5kAvgBAwoQ/6M0baViThOf9HKqz4sEWhIBMBoWCgdhZGRyZXNzEgRyZWFkEgV3cml0ZRoTCgRpbmZvEgRyZWFkEgV3cml0ZRoXCghpbnZvaWNlcxIEcmVhZBIFd3JpdGUaIQoIbWFjYXJvb24SCGdlbmVyYXRlEgRyZWFkEgV3cml0ZRoWCgdtZXNzYWdlEgRyZWFkEgV3cml0ZRoXCghvZmZjaGFpbhIEcmVhZBIFd3JpdGUaFgoHb25jaGFpbhIEcmVhZBIFd3JpdGUaFAoFcGVlcnMSBHJlYWQSBXdyaXRlGhgKBnNpZ25lchIIZ2VuZXJhdGUSBHJlYWQAAAYgf8fvHjHsWvxJgqYv9iSuVoIhJ4P7r1CAi5bN6WYVdg0=";
+    const restApiUrl = `lndconnect://lnd1.regtest.getalby.com?cert=&macaroon=${macaroon}`;
+    const lndConnectUrlField = await getByLabelText(
+      $document,
+      "lndconnect REST URL"
+    );
+    await lndConnectUrlField.type(restApiUrl);
+
+    await commonCreateWalletSuccessCheck({ page, $document });
+    await browser.close();
   });
 
   test("successfully connects to Eclair", async () => {
-    const { browser, welcomePage, $document } =
-      await commonCreateWalletUserCreate();
+    const { browser, page, $document } = await commonCreateWalletUserCreate();
 
     const createNewWalletButton = await getByText($document, "Eclair");
     createNewWalletButton.click();
@@ -166,6 +249,7 @@ test.describe("Create or connect wallets", () => {
     );
     await eclairPasswordField.type("getalby");
 
-    await commonCreateWalletSuccessCheck({ browser, welcomePage, $document });
+    await commonCreateWalletSuccessCheck({ page, $document });
+    await browser.close();
   });
 });
