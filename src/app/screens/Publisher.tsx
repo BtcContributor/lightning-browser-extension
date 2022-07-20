@@ -7,6 +7,7 @@ import dayjs from "dayjs";
 import relativeTime from "dayjs/plugin/relativeTime";
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useNavigate, useParams } from "react-router-dom";
+import { useSettings } from "~/app/context/SettingsContext";
 import utils from "~/common/lib/utils";
 import { getFiatValue } from "~/common/utils/currencyConvert";
 import { Allowance } from "~/types";
@@ -14,6 +15,8 @@ import { Allowance } from "~/types";
 dayjs.extend(relativeTime);
 
 function Publisher() {
+  const { isLoading: isLoadingSettings, settings } = useSettings();
+
   const hasFetchedData = useRef(false);
   const [allowance, setAllowance] = useState<Allowance | undefined>();
   const { id } = useParams();
@@ -26,7 +29,9 @@ function Publisher() {
           id: parseInt(id),
         });
         for await (const payment of response.payments) {
-          const totalAmountFiat = await getFiatValue(payment.totalAmount);
+          const totalAmountFiat = settings.showFiat
+            ? await getFiatValue(payment.totalAmount)
+            : "";
           payment.totalAmountFiat = totalAmountFiat;
         }
         setAllowance(response);
@@ -34,15 +39,15 @@ function Publisher() {
     } catch (e) {
       console.error(e);
     }
-  }, [id]);
+  }, [id, settings.showFiat]);
 
   useEffect(() => {
     // Run once.
-    if (!hasFetchedData.current) {
+    if (!isLoadingSettings && !hasFetchedData.current) {
       fetchData();
       hasFetchedData.current = true;
     }
-  }, [fetchData]);
+  }, [fetchData, isLoadingSettings]);
 
   return (
     <div>
