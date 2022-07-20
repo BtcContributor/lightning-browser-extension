@@ -24,6 +24,7 @@ interface State {
   password: string | null;
   saveToStorage: () => Promise<void>;
   settings: SettingsStorage;
+  reset: () => Promise<void>;
 }
 
 interface BrowserStorage {
@@ -49,7 +50,7 @@ export const DEFAULT_SETTINGS: SettingsStorage = {
 // these keys get synced from the state to the browser storage
 // the values are the default values
 const browserStorageDefaults: BrowserStorage = {
-  settings: DEFAULT_SETTINGS,
+  settings: { ...DEFAULT_SETTINGS }, // duplicate DEFALT_SETTINGS
   accounts: {},
   currentAccountId: null,
   migrations: [],
@@ -95,7 +96,7 @@ const state = createState<State>((set, get) => ({
   lock: async () => {
     const connector = get().connector;
     if (connector) {
-      connector.unload();
+      await connector.unload();
     }
     set({ password: null, connector: null, account: null });
   },
@@ -109,6 +110,10 @@ const state = createState<State>((set, get) => ({
       set(data);
     });
   },
+  reset: async () => {
+    set({ ...browserStorageDefaults });
+    get().saveToStorage();
+  },
   saveToStorage: () => {
     const current = get();
     const data = {
@@ -119,6 +124,7 @@ const state = createState<State>((set, get) => ({
   },
 }));
 
+/*
 browserStorageKeys.forEach((key) => {
   console.info(`Adding state subscription for ${key}`);
   state.subscribe(
@@ -136,5 +142,6 @@ browserStorageKeys.forEach((key) => {
     }
   );
 });
+*/
 
 export default state;
