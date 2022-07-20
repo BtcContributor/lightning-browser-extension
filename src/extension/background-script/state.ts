@@ -124,7 +124,6 @@ const state = createState<State>((set, get) => ({
   },
 }));
 
-/*
 browserStorageKeys.forEach((key) => {
   console.info(`Adding state subscription for ${key}`);
   state.subscribe(
@@ -142,6 +141,5 @@ browserStorageKeys.forEach((key) => {
     }
   );
 });
-*/
 
 export default state;
