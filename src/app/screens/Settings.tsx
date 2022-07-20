@@ -6,34 +6,20 @@ import Input from "@components/form/Input";
 import Select from "@components/form/Select";
 import Toggle from "@components/form/Toggle";
 import { Html5Qrcode } from "html5-qrcode";
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "react-toastify";
 import { useAccount } from "~/app/context/AccountContext";
+import { useSettings } from "~/app/context/SettingsContext";
 import { getTheme } from "~/app/utils";
 import { CURRENCIES } from "~/common/constants";
 import api from "~/common/lib/api";
-import { SettingsStorage } from "~/types";
 
 function Settings() {
   const { t } = useTranslation("translation", { keyPrefix: "settings" });
 
   const { fetchAccountInfo } = useAccount();
-
-  const [loading, setLoading] = useState(true);
-
-  const [settings, setSettings] = useState<SettingsStorage>({
-    websiteEnhancements: false,
-    legacyLnurlAuth: false,
-    userName: "",
-    userEmail: "",
-    locale: "",
-    theme: "system",
-    showFiat: true,
-    currency: CURRENCIES.USD,
-    exchange: "coindesk",
-    debug: false,
-  });
+  const { isLoading, settings, updateSetting } = useSettings();
 
   const [cameraPermissionsGranted, setCameraPermissionsGranted] =
     useState(false);
@@ -41,16 +27,10 @@ function Settings() {
   async function saveSetting(
     setting: Record<string, string | number | boolean>
   ) {
-    const response = await api.setSetting(setting);
-    setSettings(response);
+    // ensure to update SettingsContext
+    updateSetting(setting);
+    await api.setSetting(setting);
   }
-
-  useEffect(() => {
-    api.getSettings().then((response) => {
-      setSettings(response);
-      setLoading(false);
-    });
-  }, []);
 
   return (
     <Container>
@@ -62,7 +42,7 @@ function Settings() {
           title={t("website_enhancements.title")}
           subtitle={t("website_enhancements.subtitle")}
         >
-          {!loading && (
+          {!isLoading && (
             <Toggle
               checked={settings.websiteEnhancements}
               onChange={() => {
@@ -78,7 +58,7 @@ function Settings() {
           title={t("legacy_lnurl_auth.title")}
           subtitle={t("legacy_lnurl_auth.subtitle")}
         >
-          {!loading && (
+          {!isLoading && (
             <Toggle
               checked={settings.legacyLnurlAuth}
               onChange={() => {
@@ -120,7 +100,7 @@ function Settings() {
         </Setting>
 
         <Setting title={t("theme.title")} subtitle={t("theme.subtitle")}>
-          {!loading && (
+          {!isLoading && (
             <div className="w-64">
               <Select
                 name="theme"
@@ -141,7 +121,7 @@ function Settings() {
         </Setting>
 
         <Setting title={t("currency.title")} subtitle={t("currency.subtitle")}>
-          {!loading && (
+          {!isLoading && (
             <div className="w-64">
               <Select
                 name="currency"
@@ -164,7 +144,7 @@ function Settings() {
         </Setting>
 
         <Setting title={t("exchange.title")} subtitle={t("exchange.subtitle")}>
-          {!loading && (
+          {!isLoading && (
             <div className="w-64">
               <Select
                 name="exchange"
@@ -195,7 +175,7 @@ function Settings() {
 
       <div className="mb-12 shadow bg-white sm:rounded-md sm:overflow-hidden px-6 py-2 divide-y divide-black/10 dark:divide-white/10 dark:bg-surface-02dp">
         <Setting title={t("name.title")} subtitle={t("name.subtitle")}>
-          {!loading && (
+          {!isLoading && (
             <div className="w-64">
               <Input
                 placeholder={t("name.placeholder")}
@@ -212,7 +192,7 @@ function Settings() {
         </Setting>
 
         <Setting title={t("email.title")} subtitle={t("email.subtitle")}>
-          {!loading && (
+          {!isLoading && (
             <div className="w-64">
               <Input
                 placeholder={t("email.placeholder")}
