@@ -53,7 +53,6 @@ function Settings() {
             />
           )}
         </Setting>
-
         <Setting
           title={t("legacy_lnurl_auth.title")}
           subtitle={t("legacy_lnurl_auth.subtitle")}
@@ -69,7 +68,6 @@ function Settings() {
             />
           )}
         </Setting>
-
         <Setting
           title={t("camera_access.title")}
           subtitle={t("camera_access.subtitle")}
@@ -92,13 +90,11 @@ function Settings() {
             </p>
           )}
         </Setting>
-
         <Setting title={t("language.title")} subtitle={t("language.subtitle")}>
           <div className="w-32">
             <LocaleSwitcher />
           </div>
         </Setting>
-
         <Setting title={t("theme.title")} subtitle={t("theme.subtitle")}>
           {!isLoading && (
             <div className="w-64">
@@ -120,49 +116,77 @@ function Settings() {
           )}
         </Setting>
 
-        <Setting title={t("currency.title")} subtitle={t("currency.subtitle")}>
-          {!isLoading && (
-            <div className="w-64">
-              <Select
-                name="currency"
-                value={settings.currency}
-                onChange={async (event) => {
-                  fetchAccountInfo({ isLatestRate: true });
-                  await saveSetting({
-                    currency: event.target.value,
+        {process.env.NODE_ENV === "development" && (
+          <Setting
+            title={t("show_fiat.title")}
+            subtitle={t("show_fiat.subtitle")}
+          >
+            {!isLoading && (
+              <Toggle
+                checked={settings.showFiat}
+                onChange={() => {
+                  saveSetting({
+                    showFiat: !settings.showFiat,
                   });
                 }}
-              >
-                {Object.keys(CURRENCIES).map((currency) => (
-                  <option key={currency} value={currency}>
-                    {currency}
-                  </option>
-                ))}
-              </Select>
-            </div>
-          )}
-        </Setting>
+              />
+            )}
+          </Setting>
+        )}
 
-        <Setting title={t("exchange.title")} subtitle={t("exchange.subtitle")}>
-          {!isLoading && (
-            <div className="w-64">
-              <Select
-                name="exchange"
-                value={settings.exchange}
-                onChange={async (event) => {
-                  // exchange/value change should be reflected in the upper account-menu after select?
-                  await saveSetting({
-                    exchange: event.target.value,
-                  });
-                }}
-              >
-                <option value="alby">Alby</option>
-                <option value="coindesk">Coindesk</option>
-                <option value="yadio">yadio</option>
-              </Select>
-            </div>
-          )}
-        </Setting>
+        {settings.showFiat && (
+          <>
+            <Setting
+              title={t("currency.title")}
+              subtitle={t("currency.subtitle")}
+            >
+              {!isLoading && (
+                <div className="w-64">
+                  <Select
+                    name="currency"
+                    value={settings.currency}
+                    onChange={async (event) => {
+                      fetchAccountInfo({ isLatestRate: true });
+                      await saveSetting({
+                        currency: event.target.value,
+                      });
+                    }}
+                  >
+                    {Object.keys(CURRENCIES).map((currency) => (
+                      <option key={currency} value={currency}>
+                        {currency}
+                      </option>
+                    ))}
+                  </Select>
+                </div>
+              )}
+            </Setting>
+
+            <Setting
+              title={t("exchange.title")}
+              subtitle={t("exchange.subtitle")}
+            >
+              {!isLoading && (
+                <div className="w-64">
+                  <Select
+                    name="exchange"
+                    value={settings.exchange}
+                    onChange={async (event) => {
+                      // exchange/value change should be reflected in the upper account-menu after select?
+                      await saveSetting({
+                        exchange: event.target.value,
+                      });
+                    }}
+                  >
+                    <option value="alby">Alby</option>
+                    <option value="coindesk">Coindesk</option>
+                    <option value="yadio">yadio</option>
+                  </Select>
+                </div>
+              )}
+            </Setting>
+          </>
+        )}
       </div>
 
       <h2 className="mt-12 text-2xl font-bold dark:text-white">
