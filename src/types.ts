@@ -299,7 +299,7 @@ export type Transaction = {
   title: string | React.ReactNode;
   totalAmount: string;
   totalAmountFiat?: string;
-  totalFees?: string;
+  totalFees?: number;
   type?: "sent" | "sending" | "received";
   value?: string;
 };
@@ -317,7 +317,7 @@ export interface DbPayment {
   paymentRequest: string;
   preimage: string;
   totalAmount: number | string;
-  totalFees: number | string;
+  totalFees: number;
 }
 
 // eslint-disable-next-line @typescript-eslint/no-empty-interface
